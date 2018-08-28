@@ -40,7 +40,7 @@ using namespace std;
 #include <X11/keysym.h>
 #include <GL/glx.h>
 
-const int MAX_PARTICLES = 2;
+const int MAX_PARTICLES = 2000;
 const float GRAVITY = 0.1;
 
 //some structures
@@ -64,7 +64,7 @@ class Global {
 public:
 	int xres, yres;
 	Shape box;
-	Particle particle;
+	Particle particle[MAX_PARTICLES];
 	int n;
 	Global() {
 		xres = 800;
@@ -187,7 +187,7 @@ void makeParticle(int x, int y)
 		return;
 	cout << "makeParticle() " << x << " " << y << endl;
 	//position of particle
-	Particle *p = &g.particle;
+	Particle *p = &g.particle[g.n];
 	p->s.center.x = x;
 	p->s.center.y = y;
 	p->velocity.y = -4.0;
@@ -228,7 +228,12 @@ void check_mouse(XEvent *e)
 			savex = e->xbutton.x;
 			savey = e->xbutton.y;
 
-
+			int y = g.yres - e->xbutton.y;
+			makeParticle(e->xbutton.x, y);
+			makeParticle(e->xbutton.x, y);
+			makeParticle(e->xbutton.x, y);
+			makeParticle(e->xbutton.x, y);
+			makeParticle(e->xbutton.x, y);
 
 		}
 	}
@@ -259,23 +264,32 @@ void movement()
 {
 	if (g.n <= 0)
 		return;
-	Particle *p = &g.particle;
+	for (int i=0; i<g.n; i++) {
+	Particle *p = &g.particle[i];
 	p->s.center.x += p->velocity.x;
 	p->s.center.y += p->velocity.y;
 
+	p->velocity.y -= GRAVITY;
 	//check for collision with shapes...
-	//Shape *s;
-
-
+	Shape *s = &g.box;
+	if (p->s.center.y < (s->center.y - s->height) &&
+	    p->s.center.x > s->center.x - s->width &&
+	    p->s.center.x < s->center.x + s->width)	
+	{
+		p->velocity.y *= - 1.0;
+		p->velocity.y *= 0.8;
+	}
 
 
 	//check for off-screen
 	if (p->s.center.y < 0.0) {
 		cout << "off screen" << endl;
-		g.n = 0;
+
+		g.particle[i] = g.particle[g.n-1];
+		--g.n;
 	}
 }
-
+}
 void render()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -299,9 +313,12 @@ void render()
 	glPopMatrix();
 	//
 	//Draw the particle here
+	for (int i=0; i<g.n; i++)
+	{
+
 	glPushMatrix();
 	glColor3ub(150,160,220);
-	Vec *c = &g.particle.s.center;
+	Vec *c = &g.particle[i].s.center;
 	w =
 	h = 2;
 	glBegin(GL_QUADS);
@@ -311,6 +328,7 @@ void render()
 		glVertex2i(c->x+w, c->y-h);
 	glEnd();
 	glPopMatrix();
+	}
 	//
 	//Draw your 2D text here
 
